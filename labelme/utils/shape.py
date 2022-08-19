@@ -34,6 +34,9 @@ def shape_to_mask(
     elif shape_type == "line":
         assert len(xy) == 2, "Shape of shape_type=line must have 2 points"
         draw.line(xy=xy, fill=1, width=line_width)
+    elif shape_type == "arrow":
+        assert len(xy) == 2, "Shape of shape_type=arrow must have 2 points"
+        draw.line(xy=xy, fill=1, width=line_width)
     elif shape_type == "linestrip":
         draw.line(xy=xy, fill=1, width=line_width)
     elif shape_type == "point":

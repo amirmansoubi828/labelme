@@ -350,6 +350,14 @@ class MainWindow(QtWidgets.QMainWindow):
             self.tr("Start drawing lines"),
             enabled=False,
         )
+        createArrowMode = action(
+            self.tr("Create Arrow"),
+            lambda: self.toggleDrawMode(False, createMode="arrow"),
+            shortcuts["create_arrow"],
+            "objects",
+            self.tr("Start drawing arrows"),
+            enabled=False,
+        )
         createPointMode = action(
             self.tr("Create Point"),
             lambda: self.toggleDrawMode(False, createMode="point"),
@@ -600,6 +608,7 @@ class MainWindow(QtWidgets.QMainWindow):
             createRectangleMode=createRectangleMode,
             createCircleMode=createCircleMode,
             createLineMode=createLineMode,
+            createArrowMode=createArrowMode,
             createPointMode=createPointMode,
             createLineStripMode=createLineStripMode,
             zoom=zoom,
@@ -634,6 +643,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 createRectangleMode,
                 createCircleMode,
                 createLineMode,
+                createArrowMode,
                 createPointMode,
                 createLineStripMode,
                 editMode,
@@ -652,6 +662,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 createRectangleMode,
                 createCircleMode,
                 createLineMode,
+                createArrowMode,
                 createPointMode,
                 createLineStripMode,
                 editMode,
@@ -849,6 +860,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.actions.createRectangleMode,
             self.actions.createCircleMode,
             self.actions.createLineMode,
+            self.actions.createArrowMode,
             self.actions.createPointMode,
             self.actions.createLineStripMode,
             self.actions.editMode,
@@ -880,6 +892,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.actions.createRectangleMode.setEnabled(True)
         self.actions.createCircleMode.setEnabled(True)
         self.actions.createLineMode.setEnabled(True)
+        self.actions.createArrowMode.setEnabled(True)
         self.actions.createPointMode.setEnabled(True)
         self.actions.createLineStripMode.setEnabled(True)
         title = __appname__
@@ -957,6 +970,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.actions.createRectangleMode.setEnabled(True)
             self.actions.createCircleMode.setEnabled(True)
             self.actions.createLineMode.setEnabled(True)
+            self.actions.createArrowMode.setEnabled(True)
             self.actions.createPointMode.setEnabled(True)
             self.actions.createLineStripMode.setEnabled(True)
         else:
@@ -965,6 +979,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.actions.createRectangleMode.setEnabled(True)
                 self.actions.createCircleMode.setEnabled(True)
                 self.actions.createLineMode.setEnabled(True)
+                self.actions.createArrowMode.setEnabled(True)
                 self.actions.createPointMode.setEnabled(True)
                 self.actions.createLineStripMode.setEnabled(True)
             elif createMode == "rectangle":
@@ -972,6 +987,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.actions.createRectangleMode.setEnabled(False)
                 self.actions.createCircleMode.setEnabled(True)
                 self.actions.createLineMode.setEnabled(True)
+                self.actions.createArrowMode.setEnabled(True)
                 self.actions.createPointMode.setEnabled(True)
                 self.actions.createLineStripMode.setEnabled(True)
             elif createMode == "line":
@@ -979,6 +995,15 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.actions.createRectangleMode.setEnabled(True)
                 self.actions.createCircleMode.setEnabled(True)
                 self.actions.createLineMode.setEnabled(False)
+                self.actions.createArrowMode.setEnabled(True)
+                self.actions.createPointMode.setEnabled(True)
+                self.actions.createLineStripMode.setEnabled(True)
+            elif createMode == "arrow":
+                self.actions.createMode.setEnabled(True)
+                self.actions.createRectangleMode.setEnabled(True)
+                self.actions.createCircleMode.setEnabled(True)
+                self.actions.createLineMode.setEnabled(True)
+                self.actions.createArrowMode.setEnabled(False)
                 self.actions.createPointMode.setEnabled(True)
                 self.actions.createLineStripMode.setEnabled(True)
             elif createMode == "point":
@@ -986,6 +1011,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.actions.createRectangleMode.setEnabled(True)
                 self.actions.createCircleMode.setEnabled(True)
                 self.actions.createLineMode.setEnabled(True)
+                self.actions.createArrowMode.setEnabled(True)
                 self.actions.createPointMode.setEnabled(False)
                 self.actions.createLineStripMode.setEnabled(True)
             elif createMode == "circle":
@@ -993,6 +1019,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.actions.createRectangleMode.setEnabled(True)
                 self.actions.createCircleMode.setEnabled(False)
                 self.actions.createLineMode.setEnabled(True)
+                self.actions.createArrowMode.setEnabled(True)
                 self.actions.createPointMode.setEnabled(True)
                 self.actions.createLineStripMode.setEnabled(True)
             elif createMode == "linestrip":
@@ -1000,6 +1027,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.actions.createRectangleMode.setEnabled(True)
                 self.actions.createCircleMode.setEnabled(True)
                 self.actions.createLineMode.setEnabled(True)
+                self.actions.createArrowMode.setEnabled(True)
                 self.actions.createPointMode.setEnabled(True)
                 self.actions.createLineStripMode.setEnabled(False)
             else:

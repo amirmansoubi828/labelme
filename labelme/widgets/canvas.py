@@ -1,11 +1,10 @@
-from qtpy import QtCore
-from qtpy import QtGui
-from qtpy import QtWidgets
+import os
 
+import labelme.utils
+import numpy as np
 from labelme import QT5
 from labelme.shape import Shape
-import labelme.utils
-
+from qtpy import QtCore, QtGui, QtWidgets
 
 # TODO(unknown):
 # - [maybe] Find optimal epsilon value.
@@ -16,6 +15,8 @@ CURSOR_POINT = QtCore.Qt.PointingHandCursor
 CURSOR_DRAW = QtCore.Qt.CrossCursor
 CURSOR_MOVE = QtCore.Qt.ClosedHandCursor
 CURSOR_GRAB = QtCore.Qt.OpenHandCursor
+
+CURSOR_DRAW_PNG_FILE = os.sep.join('labelme/icons/cursor_draw.png'.split('/'))
 
 MOVE_SPEED = 5.0
 
@@ -108,6 +109,7 @@ class Canvas(QtWidgets.QWidget):
             "line",
             "point",
             "linestrip",
+            "arrow",
         ]:
             raise ValueError("Unsupported createMode: %s" % value)
         self._createMode = value
@@ -186,6 +188,18 @@ class Canvas(QtWidgets.QWidget):
     def selectedEdge(self):
         return self.hEdge is not None
 
+    def makeArrowThirdPoint(self, start_arrow, end_arrow):
+        y1 = end_arrow.y()
+        y2 = start_arrow.y()
+        x1 = end_arrow.x()
+        x2 = start_arrow.x()
+        third_point_x = (y2 - y1) * 0.25 + x2
+        third_point_y = (x1 - x2) * 0.25 + y2
+        if third_point_x < 0 or third_point_x > self.pixmap.width() or third_point_y < 0 or third_point_y > self.pixmap.height():
+            third_point_x = (y1 - y2) * 0.25 + x2
+            third_point_y = (x2 - x1) * 0.25 + y2
+        return QtCore.QPoint(third_point_x, third_point_y)
+
     def mouseMoveEvent(self, ev):
         """Update line with last point and current coordinates."""
         try:
@@ -203,7 +217,11 @@ class Canvas(QtWidgets.QWidget):
         if self.drawing():
             self.line.shape_type = self.createMode
 
-            self.overrideCursor(CURSOR_DRAW)
+            # self.overrideCursor(CURSOR_DRAW)
+            self.restoreCursor()
+            self._cursor = CURSOR_DRAW
+            custom_cursor = QtGui.QCursor(QtGui.QPixmap(CURSOR_DRAW_PNG_FILE))
+            self.setCursor(custom_cursor)
             if not self.current:
                 return
 
@@ -231,8 +249,11 @@ class Canvas(QtWidgets.QWidget):
             elif self.createMode == "circle":
                 self.line.points = [self.current[0], pos]
                 self.line.shape_type = "circle"
-            elif self.createMode == "line":
+            elif self.createMode in ["line", "arrow"]:
                 self.line.points = [self.current[0], pos]
+                if self.createMode == "arrow":
+                    self.line.points = [self.current[0], self.makeArrowThirdPoint(
+                        self.current[0], pos) , pos]
                 self.line.close()
             elif self.createMode == "point":
                 self.line.points = [self.current[0]]
@@ -240,6 +261,9 @@ class Canvas(QtWidgets.QWidget):
             self.repaint()
             self.current.highlightClear()
             return
+        elif self.editing():
+            if self.movingShape and self.hShape and self.hShape.shape_type == "arrow":
+                self.editArrow(pos)
 
         # Polygon copy moving.
         if QtCore.Qt.RightButton & ev.buttons():
@@ -337,6 +361,7 @@ class Canvas(QtWidgets.QWidget):
     def removeSelectedPoint(self):
         shape = self.prevhShape
         index = self.prevhVertex
+        print("removeSelectedPoint", shape, index)
         if shape is None or index is None:
             return
         shape.removePoint(index)
@@ -344,6 +369,26 @@ class Canvas(QtWidgets.QWidget):
         self.hShape = shape
         self.prevhVertex = None
         self.movingShape = True  # Save changes
+
+    def getDistance(self, point1, point2):
+        dx = point1.x() - point2.x()
+        dy = point1.y() - point2.y()
+        return np.sqrt(dx ** 2 + dy ** 2)
+
+    def findNearestPointIndexInShape(self, shape, pos):
+        return np.argmin([self.getDistance(p, pos) for p in shape.points])
+
+    def editArrow(self, pos):
+        point_index = self.findNearestPointIndexInShape(self.hShape, pos)
+        if point_index == 1:
+            return False
+        elif point_index == 0:
+            self.hShape.points = [pos, self.makeArrowThirdPoint(
+                pos, self.hShape.points[-1]), self.hShape.points[-1]]
+        else:
+            self.hShape.points = [self.hShape.points[0], self.makeArrowThirdPoint(
+                self.hShape.points[0], pos), pos]
+        return True
 
     def mousePressEvent(self, ev):
         if QT5:
@@ -359,7 +404,7 @@ class Canvas(QtWidgets.QWidget):
                         self.line[0] = self.current[-1]
                         if self.current.isClosed():
                             self.finalise()
-                    elif self.createMode in ["rectangle", "circle", "line"]:
+                    elif self.createMode in ["rectangle", "circle", "line", "arrow"]:
                         assert len(self.current.points) == 1
                         self.current.points = self.line.points
                         self.finalise()
@@ -382,6 +427,9 @@ class Canvas(QtWidgets.QWidget):
                         self.drawingPolygon.emit(True)
                         self.update()
             elif self.editing():
+                # if self.hShape and self.hShape.shape_type == "arrow":
+                #     if self.findNearestPointIndexInShape(self.hShape, pos) == 1:
+                #         return
                 if self.selectedEdge():
                     self.addPointToEdge()
                 elif (
@@ -418,6 +466,9 @@ class Canvas(QtWidgets.QWidget):
                 self.repaint()
         elif ev.button() == QtCore.Qt.LeftButton:
             if self.editing():
+                # if self.hShape and self.hShape.shape_type == "arrow":
+                #     if self.findNearestPointIndexInShape(self.hShape, ev.pos()) == 1:
+                #         return
                 if (
                     self.hShape is not None
                     and self.hShapeIsSelected
@@ -834,7 +885,7 @@ class Canvas(QtWidgets.QWidget):
         self.current.setOpen()
         if self.createMode in ["polygon", "linestrip"]:
             self.line.points = [self.current[-1], self.current[0]]
-        elif self.createMode in ["rectangle", "line", "circle"]:
+        elif self.createMode in ["rectangle", "line", "circle", "arrow"]:
             self.current.points = self.current.points[0:1]
         elif self.createMode == "point":
             self.current = None
