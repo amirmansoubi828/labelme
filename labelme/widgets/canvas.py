@@ -1,4 +1,5 @@
 import os
+import os.path as osp
 
 import labelme.utils
 import numpy as np
@@ -16,7 +17,9 @@ CURSOR_DRAW = QtCore.Qt.CrossCursor
 CURSOR_MOVE = QtCore.Qt.ClosedHandCursor
 CURSOR_GRAB = QtCore.Qt.OpenHandCursor
 
-CURSOR_DRAW_PNG_FILE = os.sep.join('labelme/icons/cursor_draw.png'.split('/'))
+here = osp.dirname(osp.abspath(__file__))
+CURSOR_DRAW_PNG_FILE = osp.join(here, "../icons/cursor_draw.png")
+CURSOR_DRAW_PNG_FILE = os.sep.join(CURSOR_DRAW_PNG_FILE.split('/'))
 
 MOVE_SPEED = 5.0
 
