@@ -297,7 +297,8 @@ class MainWindow(QtWidgets.QMainWindow):
             slot=self.enableSaveImageWithData,
             tip="Save image data in label file",
             checkable=True,
-            checked=self._config["store_data"],
+            checked=False,
+            # checked=self._config["store_data"],
         )
 
         close = action(
