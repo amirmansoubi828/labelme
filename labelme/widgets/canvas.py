@@ -188,17 +188,17 @@ class Canvas(QtWidgets.QWidget):
     def selectedEdge(self):
         return self.hEdge is not None
 
-    def makeArrowThirdPoint(self, start_arrow, end_arrow):
+    def makeArrowExtraPoints(self, start_arrow, end_arrow):
         y1 = end_arrow.y()
         y2 = start_arrow.y()
         x1 = end_arrow.x()
         x2 = start_arrow.x()
-        third_point_x = (y2 - y1) * 0.25 + x2
-        third_point_y = (x1 - x2) * 0.25 + y2
-        if third_point_x < 0 or third_point_x > self.pixmap.width() or third_point_y < 0 or third_point_y > self.pixmap.height():
-            third_point_x = (y1 - y2) * 0.25 + x2
-            third_point_y = (x2 - x1) * 0.25 + y2
-        return QtCore.QPoint(third_point_x, third_point_y)
+        extra_points_distance_coefficient = 0.125
+        third_point_x = (y2 - y1) * extra_points_distance_coefficient + x2
+        third_point_y = (x1 - x2) * extra_points_distance_coefficient + y2
+        fourth_point_x = (y1 - y2) * extra_points_distance_coefficient + x2
+        fourth_point_y = (x2 - x1) * extra_points_distance_coefficient + y2
+        return QtCore.QPoint(third_point_x, third_point_y), QtCore.QPoint(fourth_point_x, fourth_point_y)
 
     def mouseMoveEvent(self, ev):
         """Update line with last point and current coordinates."""
@@ -252,8 +252,12 @@ class Canvas(QtWidgets.QWidget):
             elif self.createMode in ["line", "arrow"]:
                 self.line.points = [self.current[0], pos]
                 if self.createMode == "arrow":
-                    self.line.points = [self.current[0], self.makeArrowThirdPoint(
-                        self.current[0], pos) , pos]
+                    second_p, fourth_p = self.makeArrowExtraPoints(
+                        self.current[0], pos)
+                    self.line.points = [self.current[0],
+                                        second_p,
+                                        pos,
+                                        fourth_p]
                 self.line.close()
             elif self.createMode == "point":
                 self.line.points = [self.current[0]]
@@ -262,7 +266,7 @@ class Canvas(QtWidgets.QWidget):
             self.current.highlightClear()
             return
         elif self.editing():
-            if self.movingShape and self.hShape and self.hShape.shape_type == "arrow":
+            if self.movingShape and self.hShape and self.hShape.shape_type == "arrow" and self.selectedVertex():
                 self.editArrow(pos)
 
         # Polygon copy moving.
@@ -380,14 +384,18 @@ class Canvas(QtWidgets.QWidget):
 
     def editArrow(self, pos):
         point_index = self.findNearestPointIndexInShape(self.hShape, pos)
-        if point_index == 1:
+        if point_index in [1, 3]:
             return False
         elif point_index == 0:
-            self.hShape.points = [pos, self.makeArrowThirdPoint(
-                pos, self.hShape.points[-1]), self.hShape.points[-1]]
+            second_p, fourth_p = self.makeArrowExtraPoints(
+                pos, self.hShape.points[-2])
+            self.hShape.points = [pos, second_p,
+                                  self.hShape.points[-2], fourth_p]
         else:
-            self.hShape.points = [self.hShape.points[0], self.makeArrowThirdPoint(
-                self.hShape.points[0], pos), pos]
+            second_p, fourth_p = self.makeArrowExtraPoints(
+                self.hShape.points[0], pos)
+            self.hShape.points = [
+                self.hShape.points[0], second_p , pos, fourth_p]
         return True
 
     def mousePressEvent(self, ev):
@@ -710,8 +718,9 @@ class Canvas(QtWidgets.QWidget):
         return QtCore.QPoint(x, y)
 
     def outOfPixmap(self, p):
-        w, h = self.pixmap.width(), self.pixmap.height()
-        return not (0 <= p.x() <= w - 1 and 0 <= p.y() <= h - 1)
+        return False # Allowing to put points out of image
+        # w, h = self.pixmap.width(), self.pixmap.height()
+        # return not (0 <= p.x() <= w - 1 and 0 <= p.y() <= h - 1)
 
     def finalise(self):
         assert self.current
