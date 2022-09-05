@@ -80,5 +80,14 @@ def get_config(config_file_or_yaml=None, config_from_args=None):
         update_dict(
             config, config_from_args, validate_item=validate_config_item
         )
-
+    config['shape_color'] = 'manual'
+    try:
+        config_file = osp.join(here, "default_config_colors.yaml")
+        with open(config_file, 'r') as f:
+            colors = yaml.load(f.read(), Loader=yaml.Loader)
+        config['label_colors'] = colors
+    except Exception as e:
+        print(e)
+    if not config['label_colors']:
+        config['label_colors'] = {} 
     return config

@@ -7,6 +7,7 @@ import os
 import os.path as osp
 import re
 import webbrowser
+import yaml
 
 import imgviz
 import natsort
@@ -565,6 +566,15 @@ class MainWindow(QtWidgets.QMainWindow):
             self.tr("Modify the label of the selected polygon"),
             enabled=False,
         )
+        
+        edit_color = action(
+            self.tr("&Edit Label Color"),
+            self.editLabelColor,
+            shortcuts["edit_label_color"],
+            "edit-label-color",
+            self.tr("Change label color"),
+            enabled=False,
+        )
 
         fill_drawing = action(
             self.tr("Fill Drawing Polygon"),
@@ -579,7 +589,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Lavel list context menu.
         labelMenu = QtWidgets.QMenu()
-        utils.addActions(labelMenu, (edit, delete))
+        utils.addActions(labelMenu, (edit, delete, edit_color))
         self.labelList.setContextMenuPolicy(Qt.CustomContextMenu)
         self.labelList.customContextMenuRequested.connect(
             self.popLabelListMenu
@@ -598,6 +608,7 @@ class MainWindow(QtWidgets.QMainWindow):
             toggleKeepPrevMode=toggle_keep_prev_mode,
             delete=delete,
             edit=edit,
+            edit_color=edit_color,
             duplicate=duplicate,
             copy=copy,
             paste=paste,
@@ -628,6 +639,7 @@ class MainWindow(QtWidgets.QMainWindow):
             # XXX: need to add some actions here to activate the shortcut
             editMenu=(
                 edit,
+                edit_color,
                 duplicate,
                 delete,
                 None,
@@ -649,6 +661,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 createLineStripMode,
                 editMode,
                 edit,
+                edit_color,
                 duplicate,
                 copy,
                 paste,
@@ -1117,6 +1130,44 @@ class MainWindow(QtWidgets.QMainWindow):
             item.setData(Qt.UserRole, shape.label)
             self.uniqLabelList.addItem(item)
 
+    def editLabelColor(self, item=None):
+        if item and not isinstance(item, LabelListWidgetItem):
+            raise TypeError("item must be LabelListWidgetItem type")
+
+        if not self.canvas.editing():
+            return
+        if not item:
+            item = self.currentItem()
+        if item is None:
+            return
+        shape = item.shape()
+        if shape is None:
+            return
+        color = QtWidgets.QColorDialog.getColor()
+        color = color.red(), color.green(), color.blue()
+        self._config["label_colors"][shape.label] = color
+        try:
+            with open(self.labelColorsPath, 'w+') as f:
+                f.write(yaml.dump(self._config["label_colors"]))
+        except Exception as e:
+            raise e
+        for itm in self.labelList:
+            shape = itm.shape()
+            self._update_shape_color(shape)
+            if shape.group_id is None:
+                item.setText(
+                    '{} <font color="#{:02x}{:02x}{:02x}">●</font>'.format(
+                        html.escape(shape.label), *color
+                    )
+                )
+            else:
+                item.setText("{} ({})".format(shape.label, shape.group_id))
+            self.setDirty()
+        if not self.uniqLabelList.findItemsByLabel(shape.label):
+            item = QtWidgets.QListWidgetItem()
+            item.setData(Qt.UserRole, shape.label)
+            self.uniqLabelList.addItem(item)
+        
     def fileSearchChanged(self):
         self.importDirImages(
             self.lastOpenDir,
@@ -1157,6 +1208,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.actions.duplicate.setEnabled(n_selected)
         self.actions.copy.setEnabled(n_selected)
         self.actions.edit.setEnabled(n_selected == 1)
+        self.actions.edit_color.setEnabled(n_selected == 1)
 
     def addLabel(self, shape):
         if shape.group_id is None:
@@ -1202,6 +1254,21 @@ class MainWindow(QtWidgets.QMainWindow):
             and label in self._config["label_colors"]
         ):
             return self._config["label_colors"][label]
+        elif (
+            self._config["shape_color"] == "manual"
+            and not label in self._config["label_colors"]
+        ):
+            item = self.uniqLabelList.findItemsByLabel(label)[0]
+            label_id = self.uniqLabelList.indexFromItem(item).row() + 1
+            label_id += self._config["shift_auto_shape_color"]
+            color_cmap = LABEL_COLORMAP[label_id % len(LABEL_COLORMAP)]
+            self._config["label_colors"][label] = tuple(color_cmap)
+            try:
+                with open(self.labelColorsPath, 'w+') as f:
+                    f.write(yaml.dump(self._config["label_colors"]))
+            except Exception as e:
+                raise e
+            return color_cmap
         elif self._config["default_shape_color"]:
             return self._config["default_shape_color"]
         return (0, 255, 0)
@@ -1541,6 +1608,13 @@ class MainWindow(QtWidgets.QMainWindow):
             if self.imageData:
                 self.imagePath = filename
             self.labelFile = None
+        self.labelColorsPath = os.sep.join(self.imagePath.split(os.sep)[:-1] + ['label_colors.yml'])
+        if os.path.exists(self.labelColorsPath):
+            with open(self.labelColorsPath, 'r') as f:
+                try:
+                    self._config["label_colors"] = yaml.load(f.read(), Loader=yaml.Loader)
+                except Exception as e:
+                    print(e)
         image = QtGui.QImage.fromData(self.imageData)
 
         if image.isNull():

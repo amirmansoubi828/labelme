@@ -368,7 +368,6 @@ class Canvas(QtWidgets.QWidget):
     def removeSelectedPoint(self):
         shape = self.prevhShape
         index = self.prevhVertex
-        print("removeSelectedPoint", shape, index)
         if shape is None or index is None:
             return
         shape.removePoint(index)
