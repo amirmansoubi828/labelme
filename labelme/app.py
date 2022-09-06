@@ -1258,6 +1258,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self._config["shape_color"] == "manual"
             and not label in self._config["label_colors"]
         ):
+            ##: NOTE: THIS LINE OF CODE RETUEN TO BUG WHEN EDIT LABEL TO NEW LABEL NAME.
             item = self.uniqLabelList.findItemsByLabel(label)[0]
             label_id = self.uniqLabelList.indexFromItem(item).row() + 1
             label_id += self._config["shift_auto_shape_color"]
