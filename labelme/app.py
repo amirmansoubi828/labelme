@@ -1152,17 +1152,21 @@ class MainWindow(QtWidgets.QMainWindow):
         except Exception as e:
             raise e
         for itm in self.labelList:
-            shape = itm.shape()
-            self._update_shape_color(shape)
+            if shape.label != itm.shape().label:
+                continue
+            shp = itm.shape()
+            self._update_shape_color(shp)
             if shape.group_id is None:
-                item.setText(
+                itm.setText(
                     '{} <font color="#{:02x}{:02x}{:02x}">●</font>'.format(
-                        html.escape(shape.label), *color
+                        html.escape(shp.label), *shp.fill_color.getRgb()[:3]
                     )
                 )
             else:
-                item.setText("{} ({})".format(shape.label, shape.group_id))
+                itm.setText("{} ({})".format(shp.label, shp.group_id))
             self.setDirty()
+        for lli in self.uniqLabelList.findItemsByLabel(shape.label):
+            self.uniqLabelList.setItemLabel(lli, shape.label, shp.fill_color.getRgb()[:3])
         if not self.uniqLabelList.findItemsByLabel(shape.label):
             item = QtWidgets.QListWidgetItem()
             item.setData(Qt.UserRole, shape.label)
