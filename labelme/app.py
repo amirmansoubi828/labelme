@@ -1114,7 +1114,14 @@ class MainWindow(QtWidgets.QMainWindow):
         shape.label = text
         shape.flags = flags
         shape.group_id = group_id
-
+        
+        if not self.uniqLabelList.findItemsByLabel(shape.label):
+            itm = self.uniqLabelList.createItemFromLabel(shape.label)
+            self.uniqLabelList.addItem(itm)
+            rgb = self._get_rgb_by_label(shape.label)
+            self.uniqLabelList.setItemLabel(itm, shape.label, rgb)
+        self.labelDialog.addLabelHistory(shape.label)
+            
         self._update_shape_color(shape)
         if shape.group_id is None:
             item.setText(
@@ -1643,6 +1650,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.canvas.loadPixmap(QtGui.QPixmap.fromImage(image))
         flags = {k: False for k in self._config["flags"] or []}
         if self.labelFile:
+            for lbl, color in self._config['label_colors'].items():
+                if not self.uniqLabelList.findItemsByLabel(lbl):
+                    itm = self.uniqLabelList.createItemFromLabel(lbl)
+                    self.uniqLabelList.addItem(itm)
+                    rgb = self._get_rgb_by_label(lbl)
+                    self.uniqLabelList.setItemLabel(itm, lbl, rgb)
+                    self.labelDialog.addLabelHistory(lbl)
             self.loadLabels(self.labelFile.shapes)
             if self.labelFile.flags is not None:
                 flags.update(self.labelFile.flags)
